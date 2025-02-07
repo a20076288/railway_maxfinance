@@ -1,66 +1,146 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Guia Completo: Instalação do Laravel no Windows e Deploy no Railway
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Este guia documenta todos os passos seguidos para instalar e configurar Laravel no Windows e preparar o deploy no Railway. Inclui também a resolução de erros comuns encontrados durante o processo.
 
-## About Laravel
+## Passo 1: Configurar Ambiente de Desenvolvimento no Windows
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Antes de instalar o Laravel, precisamos garantir que temos todas as dependências necessárias instaladas no Windows.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Instalar Chocolatey
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Chocolatey é um gestor de pacotes para Windows, usado para instalar PHP, Composer e outras ferramentas.
 
-## Learning Laravel
+1. Abre o PowerShell como Administrador.
+2. Executa o seguinte comando para instalar o Chocolatey:
+   ```powershell
+   Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+   ```
+3. Fecha e reabre o PowerShell, depois testa se o Chocolatey foi instalado:
+   ```powershell
+   choco -v
+   ```
+4. Se devolver um número de versão, está pronto!
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Instalar Scoop (Opcional, para Railway CLI)
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+Scoop é um gestor de pacotes alternativo, útil para instalar a CLI do Railway.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+1. No PowerShell, executa:
+   ```powershell
+   iwr -useb get.scoop.sh | iex
+   ```
+2. Verifica a instalação:
+   ```powershell
+   scoop help
+   ```
+3. Se pretenderes usar a CLI do Railway, instala-a com:
+   ```powershell
+   scoop install railway
+   ```
+4. Se encontrares erros de instalação do scoop, tenta executar:
+   ```powershell
+   $env:SCOOP='C:\Users\teu-usuario\scoop'
+   [System.Environment]::SetEnvironmentVariable('Path', $env:SCOOP+'\shims;'+[System.EnvironmentVariableTarget]::User), [System.EnvironmentVariableTarget]::User)
+   ```
 
-## Laravel Sponsors
+## Passo 2: Instalar PHP 8.3 e Dependências
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+O Laravel precisa de PHP 8.3 e de algumas extensões adicionais.
 
-### Premium Partners
+### Instalar PHP 8.3
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+1. Abre o PowerShell como Administrador e executa:
+   ```powershell
+   choco install php --version=8.3 --force
+   ```
+2. Verifica se o PHP foi instalado corretamente:
+   ```powershell
+   php -v
+   ```
+3. Se devolver algo como `PHP 8.3.0`, está tudo certo!
+4. Caso o comando `php` não seja reconhecido, adiciona manualmente a pasta do PHP às variáveis de ambiente:
+   ```powershell
+   $env:Path += ";C:\tools\php83"
+   ```
 
-## Contributing
+### Ativar Extensões no PHP.ini
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+1. Abre o ficheiro de configuração do PHP:
+   ```powershell
+   notepad C:\tools\php83\php.ini
+   ```
+2. Remove o `;` no início das seguintes linhas para ativar as extensões necessárias:
+   ```ini
+   extension=bcmath
+   extension=gd
+   extension=intl
+   extension=mbstring
+   extension=pdo_mysql
+   extension=zip
+   extension=sodium
+   extension=fileinfo
+   ```
+3. Guarda o ficheiro (`Ctrl + S`) e fecha.
+4. Atualiza as variáveis de ambiente:
+   ```powershell
+   refreshenv
+   ```
+5. Verificar se as extensões foram ativadas corretamente:
+   ```powershell
+   php -m
+   ```
+6. Se todas as extensões estiverem listadas, está pronto!
+7. Caso o `intl` não esteja ativado, reinstala o PHP com:
+   ```powershell
+   choco upgrade php --force
+   ```
 
-## Code of Conduct
+## Passo 3: Criar Banco de Dados no Railway
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+1. Acede ao Railway.
+2. Cria um novo Projeto.
+3. Adiciona um Serviço MySQL.
+4. Copia as credenciais do MySQL e define no `.env`:
+   ```ini
+   DB_CONNECTION=mysql
+   DB_HOST=monorail.proxy.rlwy.net
+   DB_PORT=39513
+   DB_DATABASE=railway
+   DB_USERNAME=root
+   DB_PASSWORD=sua-senha-aqui
+   ```
+5. Verifica a conexão executando:
+   ```bash
+   mysql -h monorail.proxy.rlwy.net -P 39513 -u root -p railway
+   ```
+6. Se conseguires conectar, o banco está pronto!
 
-## Security Vulnerabilities
+## Passo 4: Criar Domínio Público no Railway
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+1. No Railway, vai a **Settings > Generate Domain**.
+2. Copia o domínio gerado e adiciona ao `.env`:
+   ```ini
+   APP_URL=https://teu-projeto.up.railway.app
+   ```
+3. Testa se a aplicação responde ao endereço gerado.
 
-## License
+## Passo 5: Testar e Resolver Erros
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Se a aplicação não estiver acessível:
+```bash
+railway logs
+```
+
+Se houver erro **502** no Railway:
+```bash
+railway redeploy
+```
+
+Caso Laravel não reconheça as configurações:
+```bash
+php artisan config:clear
+php artisan cache:clear
+php artisan config:cache
+```
+
+Agora o Laravel está configurado corretamente para o Railway! 🚀
