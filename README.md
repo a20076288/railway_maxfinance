@@ -3,11 +3,9 @@
 Este guia documenta todos os passos necessários para instalar e configurar o Laravel no Windows e prepará-lo para deploy no Railway. Inclui também a resolução de erros comuns encontrados durante a instalação.
 
 ## Passo 1: Instalar Chocolatey e Scoop (Se Necessário)
-
 Antes de instalar o PHP e outras dependências, precisamos do Chocolatey e, opcionalmente, do Scoop para gerir pacotes no Windows.
 
 ### 1.1 Instalar Chocolatey
-
 Chocolatey é um gestor de pacotes para Windows, usado para instalar PHP, Composer e outras ferramentas.
 
 1. Abre o PowerShell como Administrador.
@@ -22,7 +20,6 @@ Chocolatey é um gestor de pacotes para Windows, usado para instalar PHP, Compos
 4. Se devolver um número de versão, está pronto!
 
 ### 1.2 Instalar Scoop (Opcional, para Railway CLI)
-
 Scoop é um gestor de pacotes alternativo, útil para instalar a CLI do Railway.
 
 1. No PowerShell, executa:
@@ -39,8 +36,8 @@ Scoop é um gestor de pacotes alternativo, útil para instalar a CLI do Railway.
    ```
 4. Se encontrares erros de instalação do scoop, tenta executar:
    ```powershell
-   $env:SCOOP='C:\Users\teu-usuario\scoop'
-   [System.Environment]::SetEnvironmentVariable('Path', $env:SCOOP+'\shims;'+[System.Environment]::GetEnvironmentVariable('Path', [System.EnvironmentVariableTarget]::User), [System.EnvironmentVariableTarget]::User)
+   $env:SCOOP="C:\Users\teu-usuario\scoop"
+   [System.Environment]::SetEnvironmentVariable("Path", $env:SCOOP+"\shims;"+[System.Environment]::GetEnvironmentVariable("Path", [System.EnvironmentVariableTarget]::User), [System.EnvironmentVariableTarget]::User)
    ```
 
 ## Passo 2: Instalar PHP 8.3 e Dependências
@@ -57,7 +54,7 @@ O Laravel precisa de PHP 8.3 e de algumas extensões adicionais.
    ```powershell
    php -v
    ```
-3. Se devolver algo como `PHP 8.3.0`, está tudo certo!
+3. Se devolver algo como PHP 8.3.0, está tudo certo!
 4. Caso o comando PHP não seja reconhecido, adiciona manualmente a pasta do PHP às variáveis de ambiente:
    ```powershell
    $env:Path += ";C:\tools\php83"
@@ -94,8 +91,7 @@ O Laravel precisa de PHP 8.3 e de algumas extensões adicionais.
 ## Passo 3: Criar o Repositório no GitHub
 
 1. Vai ao GitHub e cria um novo repositório.
-2. Copia o link do repositório (exemplo: `https://github.com/teu-usuario/teu-repo.git`).
-3. Configura o repositório localmente:
+2. Copia o link do repositório e configura localmente:
    ```bash
    git init
    git remote add origin https://github.com/teu-usuario/teu-repo.git
@@ -121,7 +117,19 @@ O Laravel precisa de PHP 8.3 e de algumas extensões adicionais.
 ## Passo 5: Configurar o Railway e Corrigir Erros de Deploy
 
 1. Liga o Railway ao repositório GitHub.
-2. Em `Settings > Variables`, adiciona as variáveis do `.env`.
+2. Em `Settings > Variables`, adiciona as variáveis do `.env`, incluindo:
+   ```ini
+   APP_KEY=base64:gerar-uma-chave
+   DB_CONNECTION=mysql
+   DB_HOST=monorail.proxy.rlwy.net
+   DB_PORT=39513
+   DB_DATABASE=railway
+   DB_USERNAME=root
+   DB_PASSWORD=sua-senha-aqui
+   APP_URL=https://teu-projeto.up.railway.app
+   ASSET_URL=https://teu-projeto.up.railway.app
+   PORT=8080
+   ```
 3. Faz redeploy no Railway:
    ```bash
    railway redeploy
@@ -130,5 +138,7 @@ O Laravel precisa de PHP 8.3 e de algumas extensões adicionais.
    ```bash
    railway run php artisan serve --host=0.0.0.0 --port=8080
    ```
+
+Se houver erro **502** no Railway, verifica as variáveis de ambiente e ativa o **Public Networking**.
 
 Agora tens um guia atualizado e completo para instalar e configurar Laravel no Railway! 🚀
