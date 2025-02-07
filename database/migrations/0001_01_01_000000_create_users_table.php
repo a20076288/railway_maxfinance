@@ -13,14 +13,19 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('primeiro_nome');
+            $table->string('ultimo_nome');
             $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
+            $table->date('data_nascimento')->nullable();
+            $table->string('cargo')->default('Colaborador'); // Agora aceita um ENUM no PHP
+            $table->string('funcao')->nullable();
             $table->string('password');
+            $table->timestamp('email_verified_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
 
+        // 🔹 Mantemos as tabelas necessárias para a autenticação do Laravel
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');

@@ -2,47 +2,61 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use App\Models\CargoEnum; // Importar o ENUM
+use App\Models\Departamento;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles; // 🔹 Mantive tudo igual ao original
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
-        'name',
+        'primeiro_nome',
+        'ultimo_nome',
         'email',
+        'data_nascimento',
+        'cargo',
+        'funcao',
         'password',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
+    protected $casts = [
+        'password' => 'hashed',
+        'data_nascimento' => 'date',
+        'cargo' => CargoEnum::class, 
+    ];
+
     /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
+     * 🔹 Mutator para `name` (Usado no Filament)
      */
-    protected function casts(): array
+    protected function name(): Attribute
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return Attribute::make(
+            get: fn () => "{$this->primeiro_nome} {$this->ultimo_nome}"
+        );
+    }
+
+    public function departamentos(): BelongsToMany
+    {
+        return $this->belongsToMany(Departamento::class, 'departamento_user');
+    }
+
+    /**
+     * Verifica se o utilizador é diretor de algum departamento
+     */
+    public function eDiretor(): bool
+    {
+        return Departamento::where('diretor_id', $this->id)->exists();
     }
 }
