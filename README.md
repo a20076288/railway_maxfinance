@@ -15,11 +15,12 @@ Chocolatey é um gestor de pacotes para Windows, usado para instalar PHP, Compos
    ```powershell
    Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
    ```
+   *Este comando configura a política de execução do PowerShell e instala o Chocolatey.*
 3. Fecha e reabre o PowerShell, depois testa se o Chocolatey foi instalado:
    ```powershell
    choco -v
    ```
-4. Se devolver um número de versão, está pronto!
+   *Se devolver um número de versão, significa que a instalação foi bem-sucedida.*
 
 ### Instalar Scoop (Opcional, para Railway CLI)
 
@@ -29,6 +30,7 @@ Scoop é um gestor de pacotes alternativo, útil para instalar a CLI do Railway.
    ```powershell
    iwr -useb get.scoop.sh | iex
    ```
+   *Este comando instala o Scoop no sistema.*
 2. Verifica a instalação:
    ```powershell
    scoop help
@@ -37,11 +39,7 @@ Scoop é um gestor de pacotes alternativo, útil para instalar a CLI do Railway.
    ```powershell
    scoop install railway
    ```
-4. Se encontrares erros de instalação do scoop, tenta executar:
-   ```powershell
-   $env:SCOOP='C:\Users\teu-usuario\scoop'
-   [System.Environment]::SetEnvironmentVariable('Path', $env:SCOOP+'\shims;'+[System.EnvironmentVariableTarget]::User), [System.EnvironmentVariableTarget]::User)
-   ```
+   *Este comando instala a ferramenta CLI do Railway.*
 
 ## Passo 2: Instalar PHP 8.3 e Dependências
 
@@ -53,51 +51,16 @@ O Laravel precisa de PHP 8.3 e de algumas extensões adicionais.
    ```powershell
    choco install php --version=8.3 --force
    ```
+   *Isto instala a versão 8.3 do PHP.*
 2. Verifica se o PHP foi instalado corretamente:
    ```powershell
    php -v
    ```
-3. Se devolver algo como `PHP 8.3.0`, está tudo certo!
-4. Caso o comando `php` não seja reconhecido, adiciona manualmente a pasta do PHP às variáveis de ambiente:
-   ```powershell
-   $env:Path += ";C:\tools\php83"
-   ```
+   *Se devolver algo como `PHP 8.3.0`, está tudo certo!*
 
-### Ativar Extensões no PHP.ini
+## Passo 3: Configurar o Railway
 
-1. Abre o ficheiro de configuração do PHP:
-   ```powershell
-   notepad C:\tools\php83\php.ini
-   ```
-2. Remove o `;` no início das seguintes linhas para ativar as extensões necessárias:
-   ```ini
-   extension=bcmath
-   extension=gd
-   extension=intl
-   extension=mbstring
-   extension=pdo_mysql
-   extension=zip
-   extension=sodium
-   extension=fileinfo
-   ```
-3. Guarda o ficheiro (`Ctrl + S`) e fecha.
-4. Atualiza as variáveis de ambiente:
-   ```powershell
-   refreshenv
-   ```
-5. Verificar se as extensões foram ativadas corretamente:
-   ```powershell
-   php -m
-   ```
-6. Se todas as extensões estiverem listadas, está pronto!
-7. Caso o `intl` não esteja ativado, reinstala o PHP com:
-   ```powershell
-   choco upgrade php --force
-   ```
-
-## Passo 3: Criar Banco de Dados no Railway
-
-1. Acede ao Railway.
+1. Acede a [Railway](https://railway.app/).
 2. Cria um novo Projeto.
 3. Adiciona um Serviço MySQL.
 4. Copia as credenciais do MySQL e define no `.env`:
@@ -109,32 +72,39 @@ O Laravel precisa de PHP 8.3 e de algumas extensões adicionais.
    DB_USERNAME=root
    DB_PASSWORD=sua-senha-aqui
    ```
-5. Verifica a conexão executando:
+5. Instala a CLI do Railway e inicia sessão:
    ```bash
-   mysql -h monorail.proxy.rlwy.net -P 39513 -u root -p railway
+   railway login
    ```
-6. Se conseguires conectar, o banco está pronto!
+   *Este comando autentica-te na Railway CLI.*
+   ```bash
+   railway link
+   ```
+   *Este comando associa a pasta do teu projeto ao Railway. Se tiveres múltiplos projetos, será necessário selecionar o correto.*
+   ```bash
+   railway up
+   ```
+   *Este comando faz o deploy inicial da aplicação no Railway.*
 
-## Passo 4: Criar Domínio Público no Railway
-
-1. No Railway, vai a **Settings > Generate Domain**.
-2. Copia o domínio gerado e adiciona ao `.env`:
+6. Gere um domínio público e adiciona ao `.env`:
    ```ini
    APP_URL=https://teu-projeto.up.railway.app
    ```
-3. Testa se a aplicação responde ao endereço gerado.
+   *Isto define a URL da aplicação no Railway.*
 
-## Passo 5: Testar e Resolver Erros
+## Passo 4: Testar e Resolver Erros
 
 Se a aplicação não estiver acessível:
 ```bash
 railway logs
 ```
+*Verifica os logs da aplicação para identificar possíveis erros.*
 
 Se houver erro **502** no Railway:
 ```bash
 railway redeploy
 ```
+*Reinicia o deploy da aplicação para corrigir falhas.*
 
 Caso Laravel não reconheça as configurações:
 ```bash
@@ -142,5 +112,6 @@ php artisan config:clear
 php artisan cache:clear
 php artisan config:cache
 ```
+*Estes comandos limpam e regeneram a cache de configuração do Laravel.*
 
 Agora o Laravel está configurado corretamente para o Railway! 🚀
