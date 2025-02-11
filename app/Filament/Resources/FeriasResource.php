@@ -6,7 +6,7 @@ use App\Filament\Resources\FeriasResource\Pages;
 use App\Models\Ferias;
 use App\Models\User;
 use App\Models\CargoEnum;
-use App\Models\Departamento; // Adicione esta importação
+use App\Models\Departamento;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -25,7 +25,8 @@ class FeriasResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return Auth::user()->hasRole(['superadmin', 'admin']) || Auth::user()->cargo === CargoEnum::DIRECAO;
+        $user = Auth::user();
+        return $user->isSuperadmin() || $user->isAdmin() || $user->cargo === CargoEnum::DIRECAO;
     }
 
     public static function canCreate(): bool
@@ -38,7 +39,7 @@ class FeriasResource extends Resource
         $query = parent::getEloquentQuery();
         $user = Auth::user();
 
-        if ($user->hasRole(['superadmin', 'admin'])) {
+        if ($user->isSuperadmin() || $user->isAdmin()) {
             return $query;
         }
 
@@ -50,7 +51,24 @@ class FeriasResource extends Resource
             return $query->whereIn('user_id', $colaboradores_ids);
         }
 
-        return $query;
+        return $query->where('id', -1);
+    }
+
+    public static function canApprove(): bool
+    {
+        $user = Auth::user();
+        return $user->isSuperadmin() || $user->isAdmin() || $user->cargo === CargoEnum::DIRECAO;
+    }
+
+    public static function canReject(): bool
+    {
+        $user = Auth::user();
+        return $user->isSuperadmin() || $user->isAdmin() || $user->cargo === CargoEnum::DIRECAO;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return Auth::user()->isSuperadmin() || Auth::user()->isAdmin();
     }
 
     public static function table(Table $table): Table
@@ -80,16 +98,15 @@ class FeriasResource extends Resource
                     ]),
             ])
             ->filters([
-                // Filtro por Departamento
                 Tables\Filters\SelectFilter::make('departamento')
                     ->label('Departamento')
                     ->options(function () {
                         $user = Auth::user();
-                        
-                        if ($user->hasRole(['superadmin', 'admin'])) {
+
+                        if ($user->isSuperadmin() || $user->isAdmin()) {
                             return Departamento::all()->pluck('nome', 'id')->toArray();
                         }
-                        
+
                         return $user->departamentos->pluck('nome', 'id')->toArray();
                     })
                     ->query(function (Builder $query, $data) {
@@ -100,7 +117,6 @@ class FeriasResource extends Resource
                         }
                     }),
 
-                // Filtro por Estado
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'pendente' => 'Pendente',
@@ -109,7 +125,6 @@ class FeriasResource extends Resource
                     ])
                     ->label('Estado'),
 
-                // Filtro por Período
                 Tables\Filters\Filter::make('periodo')
                     ->form([
                         Forms\Components\DatePicker::make('data_inicio')->label('Data Inicial'),
@@ -132,24 +147,24 @@ class FeriasResource extends Resource
                     ->label('Aprovar')
                     ->icon('heroicon-o-check-circle')
                     ->requiresConfirmation()
-                    ->visible(fn () => Auth::user()->hasRole(['superadmin', 'admin']))
+                    ->visible(fn () => Auth::user()->isSuperadmin() || Auth::user()->isAdmin() || Auth::user()->cargo === CargoEnum::DIRECAO)
                     ->action(fn (Ferias $ferias) => $ferias->update(['status' => 'aprovado'])),
 
                 Action::make('Rejeitar')
                     ->label('Rejeitar')
                     ->icon('heroicon-o-x-circle')
                     ->requiresConfirmation()
-                    ->visible(fn () => Auth::user()->hasRole(['superadmin', 'admin']))
+                    ->visible(fn () => Auth::user()->isSuperadmin() || Auth::user()->isAdmin() || Auth::user()->cargo === CargoEnum::DIRECAO)
                     ->action(fn (Ferias $ferias) => $ferias->update(['status' => 'rejeitado'])),
 
                 Tables\Actions\DeleteAction::make()
                     ->label('Eliminar')
-                    ->visible(fn () => Auth::user()->hasRole(['superadmin']) || Auth::user()->cargo === CargoEnum::DIRECAO),
+                    ->visible(fn () => Auth::user()->isSuperadmin() || Auth::user()->isAdmin()),
             ])
             ->bulkActions([
-                DeleteBulkAction::make()->visible(fn () => Auth::user()->hasRole(['superadmin'])),
+                DeleteBulkAction::make()->visible(fn () => Auth::user()->isSuperadmin()),
             ])
-            ->defaultSort('data_inicio', 'desc'); // Ordenação padrão por data mais recente
+            ->defaultSort('data_inicio', 'desc');
     }
 
     public static function getPages(): array

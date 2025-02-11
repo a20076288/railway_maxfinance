@@ -25,12 +25,16 @@ use Filament\Facades\Filament;
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
+
+    public static function getNavigationLabel(): string
+    {
+        return 'Utilizadores';
+    }
 
     public static function canViewAny(): bool
     {
-        return Filament::auth()->user()->can('manage-users');
+        return Filament::auth()->user()->isSuperadmin();
     }
 
     public static function form(Form $form): Form
@@ -70,7 +74,6 @@ class UserResource extends Resource
                     ->label('Função na Empresa')
                     ->nullable(),
 
-                // Seleção de múltiplos departamentos
                 MultiSelect::make('departamentos')
                     ->label('Departamentos')
                     ->relationship('departamentos', 'nome')
@@ -83,7 +86,6 @@ class UserResource extends Resource
                     ->required()
                     ->default(fn () => Role::where('name', 'colaborador')->first()?->id),
 
-                // O campo password só será "dehydrated" (ou seja, incluído na submissão) se tiver valor
                 TextInput::make('password')
                     ->label('Password')
                     ->password()
@@ -91,8 +93,8 @@ class UserResource extends Resource
                     ->dehydrated(fn ($state) => filled($state))
                     ->dehydrateStateUsing(fn ($state) => bcrypt($state))
                     ->required(fn ($record) => $record === null)
-                    ->helperText('Se não inserir uma nova password, a password atual do utilizador será mantida.') // 🔥 Agora aparece abaixo do campo
-                ]);
+                    ->helperText('Se não inserir uma nova password, a password atual do utilizador será mantida.'),
+            ]);
     }
 
     public static function table(Table $table): Table
@@ -118,24 +120,22 @@ class UserResource extends Resource
                     ->label('Cargo')
                     ->sortable(),
 
-                // Mostrar departamentos corretamente
                 Tables\Columns\TextColumn::make('departamentos.nome')
                     ->label('Departamentos')
                     ->sortable()
                     ->getStateUsing(fn (User $record) => implode(', ', $record->departamentos->pluck('nome')->toArray())),
 
-                // Mostrar roles corretamente
                 Tables\Columns\TextColumn::make('roles.name')
                     ->label('Role')
                     ->sortable()
                     ->getStateUsing(fn (User $record) => $record->getRoleNames()->join(', ')),
             ])
             ->actions([
-                EditAction::make()->visible(fn () => Filament::auth()->user()->can('manage-users')),
-                DeleteAction::make()->visible(fn () => Filament::auth()->user()->can('manage-users')),
+                EditAction::make()->visible(fn () => Filament::auth()->user()->isSuperadmin()),
+                DeleteAction::make()->visible(fn () => Filament::auth()->user()->isSuperadmin()),
             ])
             ->bulkActions([
-                DeleteBulkAction::make()->visible(fn () => Filament::auth()->user()->can('manage-users')),
+                DeleteBulkAction::make()->visible(fn () => Filament::auth()->user()->isSuperadmin()),
             ]);
     }
 
@@ -164,7 +164,6 @@ class UserResource extends Resource
 
     public static function mutateFormDataBeforeSave(array $data, Model $record): array
     {
-        // Prepara os dados a atualizar
         $updateData = [
             'primeiro_nome'   => $data['primeiro_nome'],
             'ultimo_nome'     => $data['ultimo_nome'],
@@ -174,7 +173,6 @@ class UserResource extends Resource
             'funcao'          => $data['funcao'] ?? null,
         ];
 
-        // Se existir uma nova password, esta já estará "hashed" graças ao dehydrateStateUsing
         if (!empty($data['password'])) {
             $updateData['password'] = $data['password'];
         }
