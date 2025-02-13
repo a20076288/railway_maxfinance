@@ -32,6 +32,18 @@ class UserResource extends Resource
         return 'Utilizadores';
     }
 
+    public static function getPluralLabel(): ?string
+    {
+        return 'Utilizadores';
+    }
+
+    public static function getLabel(): ?string
+    {
+        return 'Utilizador';
+    }
+
+
+
     public static function canViewAny(): bool
     {
         return Filament::auth()->user()->isSuperadmin();
