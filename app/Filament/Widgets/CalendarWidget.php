@@ -97,14 +97,14 @@ class CalendarWidget extends FullCalendarWidget
                         ->required()
                         ->label('Data de Início')
                         ->native(false)
-                        ->locale('pt')
+                        ->locale('pt_PT')
                         ->minDate(now())
                         ->disabledDates(fn () => $this->getDisabledDates()),
                     Forms\Components\DatePicker::make('data_fim')
                         ->required()
                         ->label('Data de Fim')
                         ->native(false)
-                        ->locale('pt')
+                        ->locale('pt_PT')
                         ->minDate(now())
                         ->disabledDates(fn () => $this->getDisabledDates()),
                 ])

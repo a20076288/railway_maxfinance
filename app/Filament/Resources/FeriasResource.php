@@ -23,6 +23,21 @@ class FeriasResource extends Resource
     protected static ?string $model = Ferias::class;
     protected static ?string $navigationIcon = 'heroicon-o-calendar';
 
+    public static function getNavigationLabel(): string
+    {
+        return 'Férias';
+    }
+
+    public static function getPluralLabel(): ?string
+    {
+        return 'Férias';
+    }
+
+    public static function getLabel(): ?string
+    {
+        return 'Férias';
+    }
+
     public static function canViewAny(): bool
     {
         $user = Auth::user();
