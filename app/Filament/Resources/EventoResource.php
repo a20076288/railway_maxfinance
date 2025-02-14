@@ -12,23 +12,18 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\DeleteBulkAction;
 
 class EventoResource extends Resource
 {
     protected static ?string $model = Evento::class;
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
 
-    /**
-     * 🔹 Apenas o Superadmin pode aceder ao recurso
-     */
     public static function canViewAny(): bool
     {
         return Auth::user()->hasRole('superadmin');
     }
 
-    /**
-     * 🔹 Formulário para criar/editar eventos
-     */
     public static function form(Form $form): Form
     {
         return $form
@@ -50,30 +45,34 @@ class EventoResource extends Resource
                 Forms\Components\DatePicker::make('data_inicio')
                     ->label('Data de Início')
                     ->native(false)
-                    ->locale('pt')
+                    ->locale('pt_PT')
                     ->required(),
 
                 Forms\Components\DatePicker::make('data_fim')
                     ->label('Data de Fim')
                     ->native(false)
-                    ->locale('pt')
+                    ->locale('pt_PT')
                     ->required()
-                    ->helperText('A data final deve ser igual ou posterior à data de início.'),
+                    ->helperText('A data final deve ser igual ou posterior à data de início')
+                    ->afterOrEqual('data_inicio')
+                    ->validationMessages([
+                        'after_or_equal' => 'A data deve ser igual ou posterior à :date',
+                    ]),
 
-                // 🔹 Novo campo para associar múltiplas empresas ao evento
                 Forms\Components\Select::make('empresas')
-                    ->label('Empresas')
-                    ->relationship('empresas', 'nome') // Relacionamento com o modelo Empresa
-                    ->multiple() // Permitir múltiplas seleções
-                    ->preload() // Carregar as opções previamente
-                    ->searchable() // Permitir pesquisa por nome
-                    ->required(),
+                    ->label('Empresas do Evento')
+                    ->relationship('empresas', 'nome')
+                    ->multiple()
+                    ->preload()
+                    ->searchable()
+                    ->required(fn ($get) => $get('tipo') === 'evento')
+                    ->placeholder('Selecione uma ou mais empresas')
+                    ->validationMessages([
+                        'required' => 'Tem de selecionar uma ou mais empresas para criar este evento',
+                    ]),
             ]);
     }
 
-    /**
-     * 🔹 Tabela para listar eventos existentes
-     */
     public static function table(Table $table): Table
     {
         return $table
@@ -99,26 +98,24 @@ class EventoResource extends Resource
                     ->sortable()
                     ->date('d/m/Y'),
 
-                // 🔹 Nova coluna para exibir as empresas associadas ao evento
                 Tables\Columns\TextColumn::make('empresas.nome')
                     ->label('Empresas')
                     ->sortable()
                     ->badge()
                     ->wrap(),
             ])
-            ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make(),
 
                 DeleteAction::make()
-                    ->visible(fn ($record) => $record->tipo === 'evento'), // ❌ Bloqueia apagar feriados
+                    ->visible(fn ($record) => true), 
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                DeleteBulkAction::make()
+                    ->label('Eliminar selecionados'),
+            ]);
     }
 
-    /**
-     * 🔹 Definir as páginas do recurso
-     */
     public static function getPages(): array
     {
         return [

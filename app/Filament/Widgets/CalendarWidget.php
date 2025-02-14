@@ -14,25 +14,15 @@ use Illuminate\Validation\ValidationException;
 
 class CalendarWidget extends FullCalendarWidget
 {
-    /**
-     * Cache local para eventos (armazenado como array associativo para lookup rápido)
-     */
     private array $eventosCache = [];
 
-    /**
-     * Define quem pode ver o widget.
-     */
     public static function canView(): bool
     {
         return auth()->check();
     }
 
-    /**
-     * Buscar eventos da base de dados para mostrar no calendário.
-     */
     public function fetchEvents(array $fetchInfo): array
     {
-        // Otimização com eager loading e seleção de colunas necessárias
         $ferias = Ferias::query()
             ->with('user:id,primeiro_nome,ultimo_nome')
             ->select('id', 'data_inicio', 'data_fim', 'status', 'user_id')
@@ -51,16 +41,16 @@ class CalendarWidget extends FullCalendarWidget
                 },
             ]);
 
-        // Selecionar apenas os campos necessários na query dos eventos
         $eventos = Evento::query()
+            ->with('empresas') // Carrega as empresas associadas
             ->select('id', 'nome', 'data_inicio', 'data_fim', 'tipo')
             ->whereBetween('data_inicio', [$fetchInfo['start'], $fetchInfo['end']])
             ->get()
             ->map(fn (Evento $evento) => [
                 'id'      => 'evento-' . (string) $evento->id,
-                'title'   => $evento->nome,
+                'title'   => $evento->nome . ' - ' . $evento->empresas->pluck('nome')->join(', '), // Junta os nomes das empresas
                 'start'   => Carbon::parse($evento->data_inicio)->format('Y-m-d'),
-                'end'     => Carbon::parse($evento->data_fim)->format('Y-m-d'),
+                'end'     => Carbon::parse($evento->data_fim)->addDay()->format('Y-m-d'),
                 'color'   => $evento->tipo === 'feriado' ? 'red' : 'blue',
                 'display' => 'background',
             ]);
@@ -68,9 +58,6 @@ class CalendarWidget extends FullCalendarWidget
         return collect($ferias)->merge($eventos)->all();
     }
 
-    /**
-     * Definir ações no cabeçalho do calendário (botão "Marcar Férias").
-     */
     protected function headerActions(): array
     {
         return [
@@ -99,6 +86,9 @@ class CalendarWidget extends FullCalendarWidget
                         ->native(false)
                         ->locale('pt_PT')
                         ->minDate(now())
+                        ->validationMessages([
+                            'after_or_equal' => 'A data deve ser igual ou posterior a :date',
+                        ])
                         ->disabledDates(fn () => $this->getDisabledDates()),
                     Forms\Components\DatePicker::make('data_fim')
                         ->required()
@@ -106,6 +96,9 @@ class CalendarWidget extends FullCalendarWidget
                         ->native(false)
                         ->locale('pt_PT')
                         ->minDate(now())
+                        ->validationMessages([
+                            'after_or_equal' => 'A data deve ser igual ou posterior a :date',
+                        ])
                         ->disabledDates(fn () => $this->getDisabledDates()),
                 ])
                 ->mutateFormDataUsing(function (array $data): array {
@@ -118,16 +111,9 @@ class CalendarWidget extends FullCalendarWidget
         ];
     }
 
-    /**
-     * Obter lista de dias bloqueados (fins de semana, feriados e férias já marcadas).
-     *
-     * Limita-se o processamento a um intervalo (ex: 3 meses) para melhorar o desempenho.
-     */
     private function getDisabledDates(): array
     {
         $invalidDates = [];
-
-        // Definir o intervalo a processar (exemplo: 3 meses a partir de hoje)
         $start  = now();
         $end    = now()->addMonths(3);
         $period = CarbonPeriod::create($start, $end);
@@ -138,7 +124,6 @@ class CalendarWidget extends FullCalendarWidget
             }
         }
 
-        // Obter os dias de férias já marcadas (apenas os campos necessários)
         $feriasMarcadas = Ferias::query()
             ->select('data_inicio', 'data_fim')
             ->where('user_id', Auth::id())
@@ -153,14 +138,8 @@ class CalendarWidget extends FullCalendarWidget
         return array_merge($invalidDates, $feriasMarcadas);
     }
 
-    /**
-     * Verifica se um dia é inválido (fim de semana, feriado ou evento).
-     *
-     * Utiliza um cache associativo para uma verificação mais eficiente.
-     */
     private function isInvalidDate(Carbon $date): bool
     {
-        // Se ainda não carregámos os eventos, buscamos e armazenamos na cache
         if (empty($this->eventosCache)) {
             $startYear = now()->startOfYear();
             $endYear   = now()->endOfYear();
@@ -179,17 +158,12 @@ class CalendarWidget extends FullCalendarWidget
                 )->map(fn ($d) => $d->format('Y-m-d')))
                 ->toArray();
 
-            // Converter o array para um array associativo para lookup rápido
             $this->eventosCache = array_flip($eventos);
         }
 
-        // Verifica se a data é fim de semana ou se existe na cache de eventos
         return $date->isWeekend() || isset($this->eventosCache[$date->format('Y-m-d')]);
     }
 
-    /**
-     * Ajusta automaticamente para o próximo dia útil disponível.
-     */
     private function adjustToWorkday(Carbon $date): Carbon
     {
         while ($this->isInvalidDate($date)) {
@@ -198,9 +172,6 @@ class CalendarWidget extends FullCalendarWidget
         return $date;
     }
 
-    /**
-     * Valida o período de férias antes de ser criado.
-     */
     private function validatePeriod(string $start, string $end): void
     {
         $startDate = Carbon::parse($start);
